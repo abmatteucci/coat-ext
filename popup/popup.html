@@ -1,0 +1,42 @@
+<HTML>
+	<HEAD>
+		<TITLE>COAT Ext.</TITLE>
+		<link rel="stylesheet" href="./css/styles.css">
+	</HEAD>
+	<BODY>
+		<DIV class="container">
+			<DIV class="headers">
+				<h1>COAT-EXT</h1>
+			</DIV>
+			<DIV class="content">
+				<TABLE id="tabelaFormularios" style="display:none;">
+					<thead>
+						<tr>
+							<th>ItemID</th>
+							<th>JogID</th>
+							<th>Qty. Racks</th>
+							<th>Racks Pintados</th>
+							<th>Test Rack</th>
+							<th>Actions</th>
+						</tr>
+					</thead>
+					<tbody>
+
+					</tbody>
+				</TABLE>
+				<button id="addButton">Adiciona Formulario</button>
+				<div id="formulario" style="display: none;">
+					<input type="text" id="itemID" placeholder="Item">
+					<input type="text" id="jobID" placeholder="Job">
+					<input type="number" id="quantidadeRacks" placeholder="Qty. Racks">
+					<input type="number" id="racksPintados" placeholder="Racks Pintados">
+					<label>
+						<input type="checkbox" id="testRack">Text Rack</label>
+					<button id="submitButton">Enviar</button>
+				</div>
+			</DIV>
+			<DIV class="footer"></DIV>
+		</DIV>
+		<SCRIPT src="js/popup.js"></SCRIPT>
+	</BODY>
+</HTML>
