@@ -192,6 +192,17 @@ let products = [
 	}
 ];
 
+function criarOpcoesSelect() {
+    var select = document.getElementById('itemID');
+    
+    products.forEach(function(product) {
+        var option = document.createElement('option');
+        option.value = product.name;
+        option.textContent = product.name;
+        select.appendChild(option);
+    });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     carregarDadosArmazenados();
 
@@ -207,6 +218,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Preencher a tabela com os dados existentes
     preencherTabelaFormularios();
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    carregarDadosArmazenados();
+    criarOpcoesSelect(); // Chama a função para criar as opções do select
+    // Restante do seu código...
 });
 
 function carregarDadosArmazenados() {
@@ -234,13 +251,15 @@ function preencherTabelaFormularios() {
         var row = tbody.insertRow();
         var cellItemID = row.insertCell(0);
         var cellJobID = row.insertCell(1);
-        var cellQuantidadeRacks = row.insertCell(2);
-        var cellRacksPintados = row.insertCell(3);
-        var cellTestRack = row.insertCell(4);
-        var cellAcoes = row.insertCell(5);
+        var cellQtyJobWires = row.insertCell(2);
+        var cellQuantidadeRacks = row.insertCell(3);
+        var cellRacksPintados = row.insertCell(4);
+        var cellTestRack = row.insertCell(5);
+        var cellAcoes = row.insertCell(6);
 
         cellItemID.textContent = formulario.itemID;
         cellJobID.textContent = formulario.jobID;
+        cellQtyJobWires = formulario.qtyJobWires;
         cellQuantidadeRacks.textContent = formulario.quantidadeRacks;
         cellRacksPintados.textContent = formulario.racksPintados;
         cellTestRack.textContent = formulario.testRack ? 'Sim' : 'Não';
@@ -277,6 +296,7 @@ function mostrarFormularioEditar(index) {
     var formData = listaDeFormularios[index];
     document.getElementById('itemID').value = formData.itemID;
     document.getElementById('jobID').value = formData.jobID;
+    document.getElementById('qtyJobWires').value = formData.qtyJobWires;
     document.getElementById('quantidadeRacks').value = formData.quantidadeRacks;
     document.getElementById('racksPintados').value = formData.racksPintados;
     document.getElementById('testRack').checked = formData.testRack;
@@ -286,11 +306,24 @@ function processarFormulario() {
     var formData = {
         itemID: document.getElementById('itemID').value,
         jobID: document.getElementById('jobID').value,
+        qtyJobWires: parseInt(document.getElementById('qtyJobWires').value),
         quantidadeRacks: parseInt(document.getElementById('quantidadeRacks').value),
         racksPintados: parseInt(document.getElementById('racksPintados').value),
         testRack: document.getElementById('testRack').checked,
-        horarioInclusao: new Date().toLocaleString()
+        horarioInclusao: new Date().toLocaleString(),
+        program: null
     };
+
+    // Encontra o objeto product correspondente ao itemID selecionado
+    var selectedProduct = products.find(function(product) {
+        return product.name === formData.itemID;
+    });
+
+    // Define os campos do formulário com os valores do produto selecionado
+    if (selectedProduct) {
+        formData.program = selectedProduct.program;
+        // Define outros campos se necessário...
+    }
 
     let index = verificarJob(formData);
     
@@ -310,6 +343,7 @@ function processarFormulario() {
     var mensagem =
         "ItemID: " + formData.itemID +
         "\nJobID: " + formData.jobID +
+        "\nQty. wires: " + formData.qtyJobWires +
         "\nQuantidade de Racks: " + formData.quantidadeRacks +
         "\nRacks Pintados: " + formData.racksPintados +
         "\nRacks Não Pintados: " + racksNaoPintados +
@@ -352,14 +386,21 @@ function exibirGrafico(index) {
     var labels = [];
     var data = [];
 
+    var dataAtual = new Date();
+    
+
     var horaAtual = new Date().getHours();
     var periodoDeTrabalho = identificarPeriodoDeTrabalho(shifts);
     var inicioPeriodo = parseInt(periodoDeTrabalho.period.start);
     var fimPeriodo = parseInt(periodoDeTrabalho.period.end);
 
     var dataInclusao = formData.horarioInclusao.split(", ")[0];
+    var partesDataInclusao = dataInclusao.split("/");
     var horaTInclusao = formData.horarioInclusao.split(", ")[1];
     var horaInclusao = horaTInclusao.split(":")[0];
+
+    var dataSaveForm = new Date(partesDataInclusao[2], partesDataInclusao[1] - 1, partesDataInclusao[0]);
+
     console.log("Actual shift: " + periodoDeTrabalho.name + ", Data do registro: " + dataInclusao + ", Horário do registro: " + horaInclusao)
 
     for (var i = 0; i < 8; i++) {
@@ -367,7 +408,7 @@ function exibirGrafico(index) {
         labels.push(hora);
 
         var quantidadeRacks = formData.testRack && i === 0 ? 1 : formData.quantidadeRacks;
-        if (horaAtual >= inicioPeriodo && horaAtual < fimPeriodo) {
+        if (horaInclusao >= inicioPeriodo && horaInclusao < fimPeriodo) {
             if (i >= horaAtual && i < fimPeriodo) {
                 data.push({ x: i, y: quantidadeRacks, r: 10 });
             } else {
@@ -382,38 +423,66 @@ function exibirGrafico(index) {
     if (chart) {
         chart.destroy();
     }
-    chart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Quantidade de Racks',
-                data: data,
-                backgroundColor: function(context) {
-                    if (context.dataIndex >= horaAtual) {
-                        return 'rgba(255, 0, 0, 0.2)';
-                    } else {
-                        return 'rgba(75, 192, 192, 0.2)';
+    dataSaveForm.setHours(hours = horaTInclusao);
+    console.log("Diferença datas: " + (dataAtual - dataSaveForm));
+    console.log("form data: " + dataSaveForm);
+    console.log("Miliseconds in 8 hours: " + (8 * 3600 * 1000));
+    if (calcularHorasRestantes() < 8){
+        
+        chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Quantidade de Racks',
+                    data: data,
+                    backgroundColor: function(context) {
+                        if (context.dataIndex >= (8 - calcularHorasRestantes())) {
+                            return 'rgba(255, 0, 0, 0.2)';
+                        } else {
+                            return 'rgba(75, 192, 192, 0.2)';
+                        }
+                    },
+                    borderColor: function(context) {
+                        if (context.dataIndex >= (8 - calcularHorasRestantes())) {
+                            return 'rgba(255, 0, 0, 0.2)';
+                        } else {
+                            return 'rgba(75, 192, 192, 0.2)';
+                        }
+                    },
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
                     }
-                },
-                borderColor: function(context) {
-                    if (context.dataIndex >= horaAtual) {
-                        return 'rgba(255, 0, 0, 0.2)';
-                    } else {
-                        return 'rgba(75, 192, 192, 0.2)';
-                    }
-                },
-                borderWidth: 1
-            }]
-        },
-        options: {
-            scales: {
-                y: {
-                    beginAtZero: true
                 }
             }
-        }
-    });
+        });
+    } else {
+        chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Quantidade de Racks',
+                    data: data,
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 0.2)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    };
 }
 
 
@@ -421,19 +490,55 @@ function exibirGrafico(index) {
 function identificarPeriodoDeTrabalho(shifts) {
     var horaAtual = new Date().getHours();
     var periodo = null;
-    shifts.forEach( function (shift, index){
+    shifts.forEach(function (shift, index){
         if (horaAtual >= shift.period.start && horaAtual < shift.period.end) {
             periodo = shift;
-        } else if (horaAtual >= 23) {
+        } else if (horaAtual >= 23 || horaAtual < 7) {
             periodo = shifts[index];
         }
     });
     return periodo;
-    // if (horaAtual >= 7 && horaAtual < 15) {
-    //     return "7h às 15h";
-    // } else if (horaAtual >= 15 && horaAtual < 23) {
-    //     return "15h às 23h";
-    // } else {
-    //     return "23h às 7h";
-    // }
 }
+
+function identificarProximoPeriodoDeTrabalho(shifts) {
+    var horaAtual = new Date().getHours();
+    var shiftAtual = identificarPeriodoDeTrabalho(shifts);
+    var periodo = null;
+    shifts.forEach(function (shift, index){
+        if (shift.period.start == shiftAtual.period.end) {
+            periodo = shift;
+        };
+    });
+    return periodo;
+}
+
+// Função para calcular a quantidade de horas restantes no turno atual
+function calcularHorasRestantes() {
+    var horaAtual = new Date();
+    var proximoTurno = identificarProximoPeriodoDeTrabalho(shifts);
+    console.log("Próximo turno: " + proximoTurno.name)
+    // Crie uma nova data com a mesma data que a atual, mas com a hora do início do próximo turno
+    var horaInicioProximoTurno = new Date(horaAtual);
+    
+    if (proximoTurno.period.start > proximoTurno.period.end) {
+        // Se for Night shift, adicione um dia à data
+        horaInicioProximoTurno.setDate(horaInicioProximoTurno.getDate() + 1);
+    }
+
+    horaInicioProximoTurno.setHours(proximoTurno.period.start);
+
+    // Calcule a diferença de tempo entre a hora atual e a hora de início do próximo turno
+    var diferencaTempo = horaInicioProximoTurno - horaAtual;
+
+    if (diferencaTempo <= 0) {
+        // Próximo turno já começou, então não há horas restantes no turno atual
+        return 0;
+    } else {
+        // Converta a diferença de tempo de milissegundos para horas
+        var horasRestantes = diferencaTempo / (1000 * 60 * 60);
+        return horasRestantes;
+    }
+}
+
+// var horasRestantes = calcularHorasRestantes();
+// console.log("Horas Restantes no Turno Atual:", horasRestantes);
