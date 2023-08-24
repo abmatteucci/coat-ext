@@ -19,6 +19,7 @@
                     <tr>
                         <th>ItemID</th>
                         <th>JobID</th>
+                        <th>Qty. Wires</th>
                         <th>Quantidade de Racks</th>
                         <th>Racks Pintados</th>
                         <th>Test Rack</th>
@@ -33,8 +34,11 @@
 
             <button id="addButton">Adicionar Novo Formulário</button>
             <div id="formulario" style="display: none;">
-                <input type="text" id="itemID" placeholder="ItemID">
+                <select id="itemID" name="itemID">
+                    <option value="">Selecione um produto...</option>
+                </select>
                 <input type="text" id="jobID" placeholder="JobID">
+                <input type="text" name="" id="qtyJobWires" placeholder="Qty. wires">
                 <input type="number" id="quantidadeRacks" placeholder="Quantidade de Racks">
                 <input type="number" id="racksPintados" placeholder="Racks Pintados">
                 <label>
