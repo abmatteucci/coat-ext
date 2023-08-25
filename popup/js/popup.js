@@ -6,6 +6,19 @@ let shifts = [
     { name: "Night", period: {start: 23, end: 7}}
 ];
 
+let jobs = [];
+
+let job = {
+    jobID: null,
+    itemID: null,
+    qtyJobWires: 0,
+    startTime: null,
+    endTimePrevision: null,
+    startShift: null,
+    endShift: null,
+    finished: false
+};
+
 let products = [
 	{ 
 		name :"Braun IV",
@@ -314,6 +327,8 @@ function processarFormulario() {
         program: null
     };
 
+    
+
     // Encontra o objeto product correspondente ao itemID selecionado
     var selectedProduct = products.find(function(product) {
         return product.name === formData.itemID;
@@ -333,6 +348,10 @@ function processarFormulario() {
     } else {
         listaDeFormularios[index] = formData;
     }
+
+    var job = criarJob(formData);
+    jobs.push(job);
+    console.log("Job description: " + job.endShift);
     // Salvar a lista no armazenamento
     salvarDadosArmazenados();
 
@@ -358,6 +377,25 @@ function processarFormulario() {
     var formulario = document.getElementById('formulario');
     formulario.style.display = 'none';
 }
+
+function criarJob(formData){
+
+    var actualTime = new Date().getTime();
+    job.jobID = formData.jobID;
+    job.itemID = formData.itemID;
+    job.qtyJobWires = formData.qtyJobWires;
+    job.startShift = identificarPeriodoDeTrabalho(actualTime, shifts);
+    job.startTime = actualTime;
+    job.endTimePrevision = actualTime + qtyRacksToIntMiliseconds(formData);
+    job.endShift = identificarPeriodoDeTrabalho(job.endTimePrevision, shifts);
+
+    return job;
+};
+
+function qtyRacksToIntMiliseconds(formData){
+    return parseInt((formData.qtyJobWires / 40) / formData.quantidadeRacks) * 
+        (3600 * 1000);
+};
 
 function verificarJob(formData) {
     var index = -1; // Inicializar com -1 para indicar que o formulário não foi encontrado
@@ -487,8 +525,8 @@ function exibirGrafico(index) {
 
 
 // Função para identificar o período de trabalho com base no horário atual
-function identificarPeriodoDeTrabalho(shifts) {
-    var horaAtual = new Date().getHours();
+function identificarPeriodoDeTrabalho(date, shifts) {
+    var horaAtual = new Date(date).getHours();
     var periodo = null;
     shifts.forEach(function (shift, index){
         if (horaAtual >= shift.period.start && horaAtual < shift.period.end) {
