@@ -241,13 +241,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function carregarDadosArmazenados() {
     var formData = localStorage.getItem('formularios');
+    var job = localStorage.getItem('jobs');
     if (formData) {
         listaDeFormularios = JSON.parse(formData);
+    }
+    if (job){
+        jobs = JSON.parse(job);
     }
 }
 
 function salvarDadosArmazenados() {
     localStorage.setItem('formularios', JSON.stringify(listaDeFormularios));
+    localStorage.setItem('jobs', JSON.stringify(jobs));
 }
 
 function mostrarFormulario() {
@@ -287,9 +292,17 @@ function preencherTabelaFormularios() {
         var verGraficoButton = document.createElement('button');
         verGraficoButton.textContent = 'Ver Gráfico';
         verGraficoButton.addEventListener('click', function() {
-            exibirGrafico(index);
+            exibirGrafico(listaDeFormularios, index);
         });
         cellAcoes.appendChild(verGraficoButton);
+
+        // Botão "Descrição do Job"
+        var descricaoJobButton = document.createElement('button');
+        descricaoJobButton.textContent = 'Descrição do Job';
+        descricaoJobButton.addEventListener('click', function() {
+            exibirDescricaoJob(index);
+        });
+        cellAcoes.appendChild(descricaoJobButton);
 
         var deletarButton = document.createElement('button');
         deletarButton.textContent = 'Deletar';
@@ -300,6 +313,40 @@ function preencherTabelaFormularios() {
     });
 
     tabelaFormularios.style.display = 'block';
+}
+
+function exibirDescricaoJob(index) {
+    var formData = listaDeFormularios[index];
+    console.log("Formulario a ser exibido: " + formData.jobID);
+    var job = jobs.find(function(j) {
+        console.log("Formulario a ser exibido existe e é: " + formData.jobID);
+        return j.jobID === formData.jobID;
+    });
+
+    if (job) {
+        var descricaoJobTable = document.getElementById('descricaoJobTable');
+        descricaoJobTable.style.display = 'block';
+
+        var descricaoJobBody = descricaoJobTable.querySelector('tbody');
+        descricaoJobBody.innerHTML = '';
+
+        // Preencher a tabela de descrição do Job com os detalhes do Job
+        var row = descricaoJobBody.insertRow();
+        var cellLabel = row.insertCell(0);
+        var cellValue = row.insertCell(1);
+
+        cellLabel.textContent = 'Item ID:';
+        cellValue.textContent = job.itemID;
+
+        row = descricaoJobBody.insertRow();
+        cellLabel = row.insertCell(0);
+        cellValue = row.insertCell(1);
+
+        cellLabel.textContent = 'Qty. Job Wires:';
+        cellValue.textContent = job.qtyJobWires;
+
+        // ... (continuar preenchendo a tabela com outros detalhes do Job)
+    }
 }
 
 function mostrarFormularioEditar(index) {
@@ -323,7 +370,7 @@ function processarFormulario() {
         quantidadeRacks: parseInt(document.getElementById('quantidadeRacks').value),
         racksPintados: parseInt(document.getElementById('racksPintados').value),
         testRack: document.getElementById('testRack').checked,
-        horarioInclusao: new Date().toLocaleString(),
+        horarioInclusao: parseInt(Date.now()),
         program: null
     };
 
@@ -351,7 +398,7 @@ function processarFormulario() {
 
     var job = criarJob(formData);
     jobs.push(job);
-    console.log("Job description: " + job.endShift);
+    console.log("Job end Prevision: " + job.endShift + ", Job End Shift: " + identificarPeriodoDeTrabalho(job.endShift, shifts));
     // Salvar a lista no armazenamento
     salvarDadosArmazenados();
 
@@ -380,7 +427,7 @@ function processarFormulario() {
 
 function criarJob(formData){
 
-    var actualTime = new Date().getTime();
+    var actualTime = Date.now();
     job.jobID = formData.jobID;
     job.itemID = formData.itemID;
     job.qtyJobWires = formData.qtyJobWires;
@@ -416,7 +463,7 @@ function deletarFormulario(index) {
 var chart = null; // Variável para armazenar o gráfico
 
 // Função para criar e exibir o gráfico com base nos dados do formulário
-function exibirGrafico(index) {
+function exibirGrafico(listaDeFormularios, index) {
     var graficoCanvas = document.getElementById('graficoBarras');
     graficoCanvas.style.display = 'block';
 
@@ -427,27 +474,23 @@ function exibirGrafico(index) {
     var dataAtual = new Date();
     
 
-    var horaAtual = new Date().getHours();
-    var periodoDeTrabalho = identificarPeriodoDeTrabalho(shifts);
+    var horaAtual = Date.now();
+    // console.log("Hora atual: " + horaAtual);
+    // console.log("Imprimindo dados do formData: " + formData.horarioInclusao + ", tipo: " + typeof(formData.horarioInclusao));
+    var periodoDeTrabalho = identificarPeriodoDeTrabalho(horaAtual, shifts);
     var inicioPeriodo = parseInt(periodoDeTrabalho.period.start);
     var fimPeriodo = parseInt(periodoDeTrabalho.period.end);
+    var dataSaveForm = new Date(parseInt(formData.horarioInclusao));
 
-    var dataInclusao = formData.horarioInclusao.split(", ")[0];
-    var partesDataInclusao = dataInclusao.split("/");
-    var horaTInclusao = formData.horarioInclusao.split(", ")[1];
-    var horaInclusao = horaTInclusao.split(":")[0];
-
-    var dataSaveForm = new Date(partesDataInclusao[2], partesDataInclusao[1] - 1, partesDataInclusao[0]);
-
-    console.log("Actual shift: " + periodoDeTrabalho.name + ", Data do registro: " + dataInclusao + ", Horário do registro: " + horaInclusao)
+    console.log("Actual shift: " + periodoDeTrabalho.name + ", Data do registro: " + dataSaveForm.getDate() + ", Horário do registro: " + dataSaveForm.getHours());
 
     for (var i = 0; i < 8; i++) {
         var hora = 'Hora ' + (i + 1);
         labels.push(hora);
 
         var quantidadeRacks = formData.testRack && i === 0 ? 1 : formData.quantidadeRacks;
-        if (horaInclusao >= inicioPeriodo && horaInclusao < fimPeriodo) {
-            if (i >= horaAtual && i < fimPeriodo) {
+        if (dataSaveForm.getHours() >= inicioPeriodo && dataSaveForm.getHours() < fimPeriodo) {
+            if (i >= dataAtual.getHours() && i < fimPeriodo) {
                 data.push({ x: i, y: quantidadeRacks, r: 10 });
             } else {
                 data.push(quantidadeRacks);
@@ -461,10 +504,12 @@ function exibirGrafico(index) {
     if (chart) {
         chart.destroy();
     }
-    dataSaveForm.setHours(hours = horaTInclusao);
-    console.log("Diferença datas: " + (dataAtual - dataSaveForm));
-    console.log("form data: " + dataSaveForm);
-    console.log("Miliseconds in 8 hours: " + (8 * 3600 * 1000));
+    //dataSaveForm.setHours(hours = horaTInclusao);
+    // console.log("Diferença datas: " + (dataAtual - dataSaveForm));
+    // console.log("form data: " + dataSaveForm);
+    // console.log("Miliseconds in 8 hours: " + (8 * 3600 * 1000));
+    console.log("Horas até o final do shift: " + calcularHorasRestantes());
+    console.log("Horas para finalizar o job: " + qtyRacksToIntMiliseconds(formData) / (60 * 60 * 1000))
     if (calcularHorasRestantes() < 8){
         
         chart = new Chart(ctx, {
@@ -528,19 +573,19 @@ function exibirGrafico(index) {
 function identificarPeriodoDeTrabalho(date, shifts) {
     var horaAtual = new Date(date).getHours();
     var periodo = null;
-    shifts.forEach(function (shift, index){
+    shifts.find(function (shift){
         if (horaAtual >= shift.period.start && horaAtual < shift.period.end) {
             periodo = shift;
         } else if (horaAtual >= 23 || horaAtual < 7) {
-            periodo = shifts[index];
+            periodo = shift;
         }
     });
     return periodo;
 }
 
-function identificarProximoPeriodoDeTrabalho(shifts) {
-    var horaAtual = new Date().getHours();
-    var shiftAtual = identificarPeriodoDeTrabalho(shifts);
+function identificarProximoPeriodoDeTrabalho(date, shifts) {
+    var horaAtual = new Date(date).getHours();
+    var shiftAtual = identificarPeriodoDeTrabalho(date, shifts);
     var periodo = null;
     shifts.forEach(function (shift, index){
         if (shift.period.start == shiftAtual.period.end) {
@@ -552,16 +597,16 @@ function identificarProximoPeriodoDeTrabalho(shifts) {
 
 // Função para calcular a quantidade de horas restantes no turno atual
 function calcularHorasRestantes() {
-    var horaAtual = new Date();
-    var proximoTurno = identificarProximoPeriodoDeTrabalho(shifts);
-    console.log("Próximo turno: " + proximoTurno.name)
+    var horaAtual = Date.now();
+    var proximoTurno = identificarProximoPeriodoDeTrabalho(horaAtual, shifts);
+    console.log("Próximo turno: " + proximoTurno.name + " se inicia às: " + proximoTurno.period.start)
     // Crie uma nova data com a mesma data que a atual, mas com a hora do início do próximo turno
     var horaInicioProximoTurno = new Date(horaAtual);
     
-    if (proximoTurno.period.start > proximoTurno.period.end) {
-        // Se for Night shift, adicione um dia à data
-        horaInicioProximoTurno.setDate(horaInicioProximoTurno.getDate() + 1);
-    }
+    // if (proximoTurno.period.start > proximoTurno.period.end) {
+    //     // Se for Night shift, adicione um dia à data
+    //     horaInicioProximoTurno.setDate(horaInicioProximoTurno.getDate() + 1);
+    // }
 
     horaInicioProximoTurno.setHours(proximoTurno.period.start);
 
