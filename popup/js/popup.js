@@ -210,15 +210,15 @@ function criarOpcoesSelect() {
     
     products.forEach(function(product) {
         var option = document.createElement('option');
-        option.value = product.name;
-        option.textContent = product.name;
+        option.value = product.name + " (" + product.item +")";
+        option.textContent = product.name + " (" + product.item +")";
         select.appendChild(option);
     });
 }
 
 document.addEventListener('DOMContentLoaded', function() {
     carregarDadosArmazenados();
-
+    carregarJobsArmazenados();
     var addButton = document.getElementById('addButton');
     if (addButton) {
         addButton.addEventListener('click', mostrarFormulario);
@@ -436,7 +436,24 @@ function criarJob(formData){
     job.endTimePrevision = actualTime + qtyRacksToIntMiliseconds(formData);
     job.endShift = identificarPeriodoDeTrabalho(job.endTimePrevision, shifts);
 
+    // Salvar o objeto job no localStorage
+    salvarJobNoLocalStorage(job);
     return job;
+};
+
+// Função para salvar um objeto job no localStorage
+function salvarJobNoLocalStorage(job) {
+    var jobData = localStorage.getItem('jobs');
+    var jobs = jobData ? JSON.parse(jobData) : [];
+    jobs.push(job);
+    localStorage.setItem('jobs', JSON.stringify(jobs));
+};
+
+function carregarJobsArmazenados() {
+    var jobData = localStorage.getItem('jobs');
+    if (jobData) {
+        jobs = JSON.parse(jobData);
+    }
 };
 
 function qtyRacksToIntMiliseconds(formData){
@@ -454,9 +471,23 @@ function verificarJob(formData) {
     return index;
 }
 
+function salvarJobsNoLocalStorage() {
+    localStorage.setItem('jobs', JSON.stringify(jobs));
+}
+
 function deletarFormulario(index) {
     listaDeFormularios.splice(index, 1); // Remove o formulário da lista pelo índice
     salvarDadosArmazenados(); // Salva a lista atualizada no armazenamento
+
+    // Encontra o job relacionado ao formulário excluído
+    var deletedJobIndex = jobs.findIndex(function(job) {
+        return job.jobID === deletedFormulario.jobID;
+    });
+
+    if (deletedJobIndex !== -1) {
+        jobs.splice(deletedJobIndex, 1); // Remove o job relacionado
+        salvarJobsNoLocalStorage(); // Salva os jobs atualizados no localStorage
+    }
     preencherTabelaFormularios(); // Atualiza a tabela na UI
 }
 
